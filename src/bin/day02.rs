@@ -38,29 +38,71 @@ impl MyShape {
     }
 }
 
-fn solution_a(data: &[(OpponentShape, MyShape)]) -> i32 {
+struct Shape {
+    shape: char,
+}
+impl Shape {
+    fn score(&self) -> i32 {
+        1 + (self.shape as i32 - ('A' as i32))
+    }
+}
+
+fn char_outcome_as_score(c: char) -> i32 {
+
+    let result = (c as i32 - 'X' as i32) * 3;
+    //eprintln!("outcome: {} -> {}", c, result);
+
+    result
+}
+
+fn shape_score_for(outcome: char, opponent: char) -> i32 {
+    // X | Loose | Rock -> Scissors
+    //             Paper -> Rock
+    //             Scissors -> Paper
+    // Y | Draw  | Same
+    // Z | Win   | Rock -> Paper
+    //             Paper -> Scissors
+    //             Scissors -> Rock
+    let result = ((opponent as i32 - 'A' as i32 + 3) + (outcome as i32 - 'Y' as i32)) % 3 + 1;
+    if result < 1 {
+        eprintln!("shape: {}:{} -> {}", opponent, outcome, result);
+    }
+
+    result
+}
+
+fn solution_b(data: &[(char, char)]) -> i32 {
     data.iter()
+        .map(|(opponent, outcome)| {
+            char_outcome_as_score(*outcome) + shape_score_for(*outcome, *opponent)
+        })
+        .sum()
+}
+
+fn solution_a(data: &[(char, char)]) -> i32 {
+    data.iter()
+        .map(|(a, b)| (OpponentShape{ shape: *a }, MyShape{ shape: *b }))
         .map(|(opponent, my)| {
-            my.score() + my.win_score(opponent)
+            my.score() + my.win_score(&opponent)
         })
         .sum()
 }
 
 fn main() {
-    let opponent_instruction = 'A' as char;
     let stdin = std::io::stdin();
-    let data: Vec<(OpponentShape, MyShape)> = stdin
+    let data: Vec<(char, char)> = stdin
         .lock()
         .lines()
         .map(|l| {
             let instructions: Vec<char> = l.unwrap().chars().collect();
 
-            (OpponentShape{ shape: instructions[0] }, MyShape{ shape: instructions[2] })
+            (instructions[0], instructions[2])
         })
         .collect();
 
     println!("first: {:?}", data[0]);
     println!("A: {}", solution_a(&data));
+    println!("B: {}", solution_b(&data));
 }
 
 #[cfg(test)]
