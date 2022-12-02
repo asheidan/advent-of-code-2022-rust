@@ -1,61 +1,88 @@
 use std::io::BufRead;
 
-#[derive(Debug)]
-struct OpponentShape {
-    shape: char,
+#[derive(Clone, Copy, Debug)]
+enum Shape {
+    Rock = 0,
+    Paper = 1,
+    Scissors = 2,
 }
 
-impl OpponentShape {
-    fn score(&self) -> i32 {
-        1 + (self.shape as i32 - ('A' as i32))
-    }
-}
-
-#[derive(Debug)]
-struct MyShape {
-    shape: char,
-}
-
-impl MyShape {
-    fn score(&self) -> i32 {
-        1 + (self.shape as i32 - ('X' as i32))
-    }
-
-    fn win_score(&self, other: &OpponentShape) -> i32 {
-        // -2 | 1 | 3 | Rock vs Scissor  | Win   | 6
-        // -1 | 1 | 2 | Rock vs Paper    | Loose | 0
-        //  0 | 1 | 1 | Rock vs Rock     | Draw  | 3
-        //  1 | 2 | 1 | Paper vs Rock    | Win   | 6
-        //  2 | 3 | 1 | Scissors vs Rock | Loose | 0
-        //
-        //  Shift it by 1 and modulus 3: (n + 1) % 3 to get the right "index".
-        //  Then we can multiply by 3 to get the win score.
-        //  Modulus for signed can be negative, so we shift an extra interval to make sure we
-        //  always end up with a positive number.
-        let n = self.score() - other.score();
-
-        ((n + 4) % 3) * 3
-    }
-}
-
-struct Shape {
-    shape: char,
-}
 impl Shape {
     fn score(&self) -> i32 {
-        1 + (self.shape as i32 - ('A' as i32))
+        1 + (*self as i32)
     }
 }
 
-fn char_outcome_as_score(c: char) -> i32 {
+impl From<char> for Shape {
+    fn from(c: char) -> Self {
+        let mut input = c as u8 - ('A' as u8);
 
-    let result = (c as i32 - 'X' as i32) * 3;
-    //eprintln!("outcome: {} -> {}", c, result);
+        if input > 2 {
+            // Shift char so it always starts from 'A'
+            // X -> A
+            // Y -> B
+            // Z -> C
+            input -= 'X' as u8 - 'A' as u8;
+        }
 
-    result
+        match input  {
+            0 => Self::Rock,
+            1 => Self::Paper,
+            2 => Self::Scissors,
+            _ => panic!("unknown char for from: {}", c),
+        }
+    }
 }
 
-fn shape_score_for(outcome: char, opponent: char) -> i32 {
+#[derive(Clone, Copy, Debug, PartialEq)]
+enum Outcome {
+    Loss = -1,
+    Draw = 0,
+    Win = 1,
+}
+
+impl Outcome {
+    fn score(&self) -> i32 {
+        (1 + (*self as i32)) * 3
+    }
+}
+
+impl From<char> for Outcome {
+    fn from(c: char) -> Self {
+        match c {
+            'X' => Self::Loss,
+            'Y' => Self::Draw,
+            'Z' => Self::Win,
+            _ => panic!("unknown char: {} for Outcome", c),
+        }
+    }
+}
+impl From<(Shape, Shape)> for Outcome {
+    fn from(shapes: (Shape, Shape)) -> Self {
+        let (my, other) = shapes;
+
+        // -2 | 0 | 2 | Rock vs Scissor  | Win
+        // -1 | 0 | 1 | Rock vs Paper    | Loose
+        //  0 | 0 | 0 | Rock vs Rock     | Draw
+        //  1 | 1 | 0 | Paper vs Rock    | Win
+        //  2 | 2 | 0 | Scissors vs Rock | Loose
+        //
+        //  Shift it by 1 and modulus 3: (n + 1) % 3 to get the right "index".
+        //  Modulus for signed can be negative, so we shift an extra interval to make sure we
+        //  always end up with a positive number.
+
+        // This could easier to read with by matching shapes directly, but the implementation is a
+        // leftover from the previous version. Why change that which isn't broken?
+        match (my as i32 - other as i32 + 4) % 3 {
+            0 => Self::Loss,
+            1 => Self::Draw,
+            2 => Self::Win,
+            _ => panic!("math is broken: {:?}, {:?}", my, other),
+        }
+    }
+}
+
+fn my_shape_for_outcome(outcome: Outcome, opponent: Shape) -> Shape {
     // X | Loose | Rock -> Scissors
     //             Paper -> Rock
     //             Scissors -> Paper
@@ -63,27 +90,29 @@ fn shape_score_for(outcome: char, opponent: char) -> i32 {
     // Z | Win   | Rock -> Paper
     //             Paper -> Scissors
     //             Scissors -> Rock
-    let result = ((opponent as i32 - 'A' as i32 + 3) + (outcome as i32 - 'Y' as i32)) % 3 + 1;
-    if result < 1 {
-        eprintln!("shape: {}:{} -> {}", opponent, outcome, result);
+    let result = ((opponent as i32 + 3) + (outcome as i32)) % 3;
+    match result {
+        0 => Shape::Rock,
+        1 => Shape::Paper,
+        2 => Shape::Scissors,
+        _ => panic!("wrong value for shape"),
     }
-
-    result
 }
 
 fn solution_b(data: &[(char, char)]) -> i32 {
     data.iter()
+        .map(|(opponent, outcome)| (Shape::from(*opponent), Outcome::from(*outcome)))
         .map(|(opponent, outcome)| {
-            char_outcome_as_score(*outcome) + shape_score_for(*outcome, *opponent)
+            outcome.score() + my_shape_for_outcome(outcome, opponent).score()
         })
         .sum()
 }
 
 fn solution_a(data: &[(char, char)]) -> i32 {
     data.iter()
-        .map(|(a, b)| (OpponentShape{ shape: *a }, MyShape{ shape: *b }))
+        .map(|(a, b)| (Shape::from(*a), Shape::from(*b)))
         .map(|(opponent, my)| {
-            my.score() + my.win_score(&opponent)
+            Outcome::from((my, opponent)).score() + my.score()
         })
         .sum()
 }
@@ -100,7 +129,6 @@ fn main() {
         })
         .collect();
 
-    println!("first: {:?}", data[0]);
     println!("A: {}", solution_a(&data));
     println!("B: {}", solution_b(&data));
 }
@@ -109,89 +137,35 @@ fn main() {
 mod tests {
     use super::*;
 
-    mod my_shape {
+    mod outcome {
         use super::*;
 
-        mod score {
-            use super::MyShape;
-
-            #[test]
-            fn rock_should_have_score_1() {
-                // Given
-                let input = MyShape{ shape: 'X' };
-
-                // When
-                let result = input.score();
-
-                // Then
-                assert_eq!(1, result);
-            }
-
-            #[test]
-            fn paper_should_have_score_2() {
-                // Given
-                let input = MyShape{ shape: 'Y' };
-
-                // When
-                let result = input.score();
-
-                // Then
-                assert_eq!(2, result);
-            }
-
-            #[test]
-            fn scissors_should_have_score_3() {
-                // Given
-                let input = MyShape{ shape: 'Z' };
-
-                // When
-                let result = input.score();
-
-                // Then
-                assert_eq!(3, result);
-            }
-        }
-
-        mod win_score {
+        mod from_shapes {
             use super::*;
 
-            #[test]
-            fn rock_rock_should_have_score_3() {
-                // Given
-                let my = MyShape{ shape: 'X' };
-                let other = OpponentShape{ shape: 'A' };
+            macro_rules! parameter_testcases {
+                ($($name:ident: $input:expr,)*) => {
+                $(
+                    #[test]
+                    fn $name() {
+                        let data = $input;
 
-                // When
-                let result = my.win_score(&other);
-
-                // Then
-                assert_eq!(3, result);
+                        assert_eq!(data.1, Outcome::from(data.0), "Outcome::from({:?}) should result in {:?}", data.0, data.1);
+                    }
+                )*
+                }
             }
 
-            #[test]
-            fn rock_paper_should_have_score_0() {
-                // Given
-                let my = MyShape{ shape: 'X' };
-                let other = OpponentShape{ shape: 'B' };
-
-                // When
-                let result = my.win_score(&other);
-
-                // Then
-                assert_eq!(0, result);
-            }
-
-            #[test]
-            fn rock_scissors_should_have_score_6() {
-                // Given
-                let my = MyShape{ shape: 'X' };
-                let other = OpponentShape{ shape: 'C' };
-
-                // When
-                let result = my.win_score(&other);
-
-                // Then
-                assert_eq!(6, result);
+            parameter_testcases! {
+                rr_draw: ((Shape::Rock, Shape::Rock),         Outcome::Draw),
+                rp_loss: ((Shape::Rock, Shape::Paper),        Outcome::Loss),
+                rs_win:  ((Shape::Rock, Shape::Scissors),     Outcome::Win),
+                pr_win:  ((Shape::Paper, Shape::Rock),        Outcome::Win),
+                pp_draw: ((Shape::Paper, Shape::Paper),       Outcome::Draw),
+                ps_loss: ((Shape::Paper, Shape::Scissors),    Outcome::Loss),
+                sr_loss: ((Shape::Scissors, Shape::Rock),     Outcome::Loss),
+                sp_win:  ((Shape::Scissors, Shape::Paper),    Outcome::Win),
+                ss_draw: ((Shape::Scissors, Shape::Scissors), Outcome::Draw),
             }
         }
     }
