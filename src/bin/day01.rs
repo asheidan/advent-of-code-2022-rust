@@ -26,6 +26,6 @@ fn main() {
 
     data.sort_by_key(|&value| Reverse(value));
 
-    println!("A: {}", solution_a(&data[..]));
+    println!("A: {}", solution_a(&data));
     println!("B: {}", solution_b(&data));
 }
