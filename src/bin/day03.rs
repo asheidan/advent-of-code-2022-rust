@@ -1,12 +1,11 @@
 use std::io::BufRead;
 
 fn bitset_from_char(c: char) -> u64 {
-    let mut offset = match c {
+    let offset = match c {
         'A'..='Z' => (c as i32) - ('A' as i32) + 26,
         'a'..='z' => (c as i32) - ('a' as i32),
         _ => panic!("invalid char for conversion: {}", c),
     };
-    //eprintln!("offset: {}", offset);
 
     1 << offset
 }
@@ -37,7 +36,17 @@ fn solution_a(data: &[String]) -> i32 {
 }
 
 fn solution_b(data: &[String]) -> i32 {
-    0
+    data.chunks(3)
+        .map(|chunk| {
+            priority_from_bitset(
+                chunk
+                    .iter()
+                    .map(|s| bitset_from_string(s))
+                    .reduce(|a, b| a & b)
+                    .unwrap(),
+            )
+        })
+        .sum()
 }
 
 fn main() {
@@ -83,7 +92,7 @@ mod tests {
         }
 
         #[test]
-        fn uppercase_Z_should_be_shifted_51() {
+        fn uppercase_z_should_be_shifted_51() {
             // When
             let result = bitset_from_char('Z');
 
