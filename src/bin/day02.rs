@@ -25,7 +25,7 @@ impl From<char> for Shape {
             input -= 'X' as u8 - 'A' as u8;
         }
 
-        match input  {
+        match input {
             0 => Self::Rock,
             1 => Self::Paper,
             2 => Self::Scissors,
@@ -111,9 +111,7 @@ fn solution_b(data: &[(char, char)]) -> i32 {
 fn solution_a(data: &[(char, char)]) -> i32 {
     data.iter()
         .map(|(a, b)| (Shape::from(*a), Shape::from(*b)))
-        .map(|(opponent, my)| {
-            Outcome::from((my, opponent)).score() + my.score()
-        })
+        .map(|(opponent, my)| Outcome::from((my, opponent)).score() + my.score())
         .sum()
 }
 
