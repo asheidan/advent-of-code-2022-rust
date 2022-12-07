@@ -23,12 +23,16 @@ fn solution_b(stacks_: &[Vec<char>], instructions: &[Vec<usize>]) -> () {
 
     instructions.iter()
         .for_each(|instruction| {
-            //eprintln!("move {} from {} to {}", instruction[0], instruction[1], instruction[2]);
+            let source_index = instruction[1] - 1;
+            let source = &mut stacks[source_index..source_index];
+            let source_len_after = source[0].len() - instruction[0];
 
-            let source_len_after = stacks[instruction[1] - 1].len() - instruction[0];
-            let mut moved_crates = stacks[instruction[1] - 1].split_off(source_len_after);
-            stacks[instruction[2] - 1].append(&mut moved_crates);
-    //eprintln!("{:?}", stacks);
+            let mut moved_crates = source[0].split_off(source_len_after);
+
+            let target_index = instruction[2] - 1;
+            let target = &mut stacks[target_index..target_index];
+
+            target[0].append(&mut moved_crates);
         });
 
     let result: String = stacks.iter().map(|stack| stack[stack.len() - 1]).collect();
