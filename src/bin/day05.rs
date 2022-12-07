@@ -5,13 +5,16 @@ fn solution_a(stacks_: &[Vec<char>], instructions: &[Vec<usize>]) -> () {
 
     instructions.iter()
         .for_each(|instruction| {
-            for _ in 1..=instruction[0] {
-                //eprintln!("move {} from {} to {}", instruction[0], instruction[1], instruction[2]);
+            let source_index = instruction[1] - 1;
+            let source = &mut stacks[source_index..source_index];
 
+            let target_index = instruction[2] - 1;
+            let target = &mut stacks[target_index..target_index];
+
+            for _ in 1..=instruction[0] {
                 let moved_crate = stacks[instruction[1] - 1].pop().unwrap();
                 stacks[instruction[2] - 1].push(moved_crate);
             }
-    //eprintln!("{:?}", stacks);
         });
 
     let result: String = stacks.iter().map(|stack| stack[stack.len() - 1]).collect();
