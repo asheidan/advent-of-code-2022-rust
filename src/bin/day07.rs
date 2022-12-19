@@ -4,32 +4,12 @@ use std::io::Read;
 fn solve_a(files: &[(String, usize)]) -> usize {
     // Map of directory path to size of files contained in the directory
     // This does not include the size of subdirectories
-    let mut dir_sizes: HashMap<String, usize> = HashMap::new();
+    let dir_sizes = directory_sizes(files);
     let mut result = 0;
 
-    for (path, size) in files.iter().rev() {
-        //eprintln!("{} {}", path, size);
-        if 0 != *size {
-            if let Some((dir_path, _file)) = path.rsplit_once("/") {
-                //eprintln!("{}", dir_path);
-                // Update entry in HashTable
-                let entry = dir_sizes.entry(dir_path.to_string());
-                *(entry.or_default()) += *size;
-            }
-        } else {
-            let dir_size: usize = dir_sizes
-                .iter()
-                .filter_map(|(key, value)| {
-                    if key.starts_with(path) {
-                        Some(*value)
-                    } else {
-                        None
-                    }
-                })
-                .sum();
-            if dir_size < 100000 {
-                result += dir_size;
-            }
+    for (_path, size) in dir_sizes {
+        if size < 100000 {
+            result += size;
         }
     }
 
@@ -48,18 +28,10 @@ fn solve_b(files: &[(String, usize)]) -> usize {
 
     let dir_sizes = directory_sizes(files);
 
-    /*
-    for (path, size) in &dir_sizes {
-        if *size >= remove_space && (*size - remove_space) < 100000 {
-            eprintln!("\x1b[33;1m{:9} : {:9} : {}\x1b[0m", size, size - remove_space, path);
-        } else {
-            eprintln!("{:9} : {:9} : {}", size, "", path);
-        }
-    }
-    */
+    //print_tree(&dir_sizes, remove_space);
 
     let answer = dir_sizes.iter()
-        .map(|(_p,s)| s.clone())
+        .map(|(_p, s)| s.clone())
         .filter(|&size| size >= remove_space)
         .min()
         .unwrap();
@@ -68,15 +40,40 @@ fn solve_b(files: &[(String, usize)]) -> usize {
     answer
 }
 
+fn print_tree(files: &[(String, usize)], limit: usize) -> () {
+    for (path, size) in files {
+        if *size >= limit && (*size - limit) < 100000 {
+            eprintln!(
+                "\x1b[33;1m{:9} : {:9} : {}\x1b[0m",
+                size,
+                size - limit,
+                path
+            );
+        } else {
+            eprintln!("{:9} : {:9} : {}", size, "", path);
+        }
+    }
+}
+
 fn directory_sizes(files: &[(String, usize)]) -> Vec<(String, usize)> {
+    let dir_sizes: Vec<(String, usize)> = files
+        .iter()
+        .filter(|(_path, size)| *size == 0)
+        .map(|(dir_path, _size)| {
+            let dir_size: usize = files
+                .iter()
+                .filter_map(|(file_path, size)| {
+                    if file_path.starts_with(dir_path) {
+                        Some(*size)
+                    } else {
+                        None
+                    }
+                })
+                .sum();
 
-    let dir_sizes: Vec<(String, usize)> = files.iter().filter(|(_path, size)| *size == 0).map(|(dir_path, _size)| {
-        let dir_size: usize = files.iter()
-            .filter_map(|(file_path, size)| if file_path.starts_with(dir_path) { Some(*size) } else { None })
-            .sum();
-
-        (dir_path.clone(), dir_size)
-    }).collect();
+            (dir_path.clone(), dir_size)
+        })
+        .collect();
 
     dir_sizes
 }
@@ -151,11 +148,6 @@ fn main() {
     files.sort();
     files.insert(0, (String::from(""), 0));
 
-    /*
-    for (path, size) in files.iter() {
-        eprintln!("{:>9} : {}", size, path);
-    }
-    */
     println!("A: {}", solve_a(&files));
     println!("B: {}", solve_b(&files));
 }
@@ -175,6 +167,7 @@ mod tests {
                 (String::from("/d/d.log"), 8033020),
                 (String::from("/d/j"), 4060174),
                 (String::from("/d/k"), 7214296),
+                (String::from("/d"), 0),
             ];
 
             // When
@@ -186,4 +179,3 @@ mod tests {
         }
     }
 }
-
