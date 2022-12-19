@@ -122,6 +122,29 @@ impl<'i> Iterator for Device<'i> {
     }
 }
 
+fn solve_b(data: &[Instruction]) -> () {
+    let mut device = Device::new(data);
+
+    let mut line = vec![' '; 40];
+
+    let mut x: usize = 0;
+
+    while let Some(cycle) = device.next() {
+        if ((x as i32 - 1)..=(x as i32 + 1)).contains(&device.register_x) {
+            line[x] = '#';
+        }
+        if cycle % 40 == 0 {
+            println!("{}", line.iter().cloned().collect::<String>());
+
+            line = vec![' '; 40];
+            x = 0;
+        }
+        else {
+            x += 1;
+        }
+    }
+}
+
 fn solve_a(data: &[Instruction]) -> i32 {
     let mut device = Device::new(data);
     let mut sum = 0;
@@ -148,4 +171,5 @@ fn main() -> () {
         .collect();
 
     println!("A: {}", solve_a(&data));
+    solve_b(&data);
 }
